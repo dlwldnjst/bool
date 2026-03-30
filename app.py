@@ -111,7 +111,7 @@ is_admin = (st.session_state.student_id == "admin")
 
 menu_options = ["🎓 연구 과제 수행", "📖 검색 연산자 가이드"]
 if is_admin:
-    menu_options.append("⚙️ 관리자")
+    menu_options.append("⚙️ 관리자 (Admin)")
 
 # 상단을 탭처럼 사용하는 모바일 UI
 choice = st.radio("메뉴이동", menu_options, horizontal=True, label_visibility="collapsed", key="menu_choice")
