@@ -141,11 +141,11 @@ if choice == "🎓 연구 과제 수행":
     total_q = len(QUIZ_QUESTIONS)
     cur = st.session_state.quiz_current
     
-    # 퀴즈 시작 전이나 종료 후에만 설명 표시
-    if cur == 0:
-        st.title("연구 과제 수행 🎓")
-        st.write("시나리오를 읽고 알맞은 검색식을 작성하세요.")
-    
+    # 세션 초기화 (상태 관리용)
+    if "quiz_answered" not in st.session_state:
+        st.session_state.quiz_answered = False
+        st.session_state.last_result = None
+
     if cur >= total_q:
         st.success(f"🎉 모든 과제를 완수했습니다! 최종 점수: {st.session_state.quiz_score}/{total_q}")
         
@@ -158,102 +158,111 @@ if choice == "🎓 연구 과제 수행":
                 history_data.append({
                     "문항": f"{i+1}번",
                     "입력한 검색식": h['answer'],
-                    "검색 결과": f"{h.get('matched_count', 0)}건",
                     "정/오": "✅" if h['correct'] else "❌",
                     "상세 진단 피드백": h['feedback']
                 })
             df_history = pd.DataFrame(history_data)
             st.dataframe(df_history, width="stretch", hide_index=True)
 
-        if st.button("처음부터 다시 시작하기"):
+        if st.button("처음부터 다시 시작하기", width="stretch"):
             st.session_state.quiz_current = 0
             st.session_state.quiz_score = 0
             st.session_state.quiz_history = []
-            st.session_state.quiz_retry_count = 0
+            st.session_state.quiz_answered = False
             st.rerun()
-    @st.fragment
-    def quiz_area(cur, q):
-        total_q = len(QUIZ_QUESTIONS)
-        st.progress(cur / total_q)
-        
-        # 미션 카드 UI
-        with st.container(border=True):
-            st.caption(f"🏁 MISSION {cur+1}")
-            st.markdown(f"### {q['question']}")
-        
-        # 실시간 논리 프리뷰 제거
-        
+        st.stop()
+
+    # 상단 진행바
+    st.progress(cur / total_q)
+    q = QUIZ_QUESTIONS[cur]
+    
+    # 퀴즈 시작 전 설명 (첫 문제에서만)
+    if cur == 0 and not st.session_state.quiz_answered:
+        st.title("연구 과제 수행 🎓")
+        st.write("시나리오를 읽고 알맞은 검색식을 작성하세요.")
+
+    # MISSION 카드
+    with st.container(border=True):
+        st.caption(f"🏁 MISSION {cur+1}")
+        st.markdown(f"### {q['question']}")
+
+    # --- 1. 풀이 단계: 아직 정답을 제출하지 않았을 때 ---
+    if not st.session_state.quiz_answered:
         with st.form(key=f"quiz_form_{cur}", clear_on_submit=False):
-            q_ans_raw = st.text_input("검색식 입력:", placeholder="여기에 검색식을 입력하세요 (예: A AND B)", key=f"q_input_{cur}")
-            # 따옴표 및 괄호 정규화 로직 추가
-            q_ans = q_ans_raw.replace('“','"').replace('”','"').replace('‘',"'").replace('’',"'").replace('（','(').replace('）',')').upper().strip()
+            q_ans_raw = st.text_input("검색식 입력:", placeholder="예: COVID AND 팩트체크", key=f"q_input_{cur}")
             submit_btn = st.form_submit_button("수행 결과 제출 ➡️", width="stretch", type="primary")
 
-        if submit_btn:
-            if not q_ans:
-                st.warning("검색식을 입력해주세요!")
-            else:
-                from logic import get_logic_breakdown, check_quiz
-                logic_data = get_logic_breakdown(q_ans)
-                
-                try:
-                    is_correct, feedback = check_quiz(cur, q_ans)
-                except Exception as e:
-                    is_correct, feedback = False, f"문법 오류: 구조가 올바르지 않습니다."
-                
-                # 피드백 섹션 (벤다이어그램 포함)
-                with st.status("🔍 제출된 논리 분석 중...", expanded=True) as status:
-                    col_v, col_t = st.columns([4, 6])
-                    with col_v:
-                        k1 = logic_data['keywords'][0] if len(logic_data['keywords']) > 0 else "단어A"
-                        k2 = logic_data['keywords'][1] if len(logic_data['keywords']) > 1 else "단어B"
-                        st.markdown(render_venn_svg(logic_data['operator'].lower(), k1, k2), unsafe_allow_html=True)
-                    with col_t:
-                        st.info(f"**해석:** {logic_data['description']}")
-                        if is_correct:
-                            st.success(f"🎉 **정답입니다!** {feedback}")
-                            status.update(label="✅ 분석 완료: 정답", state="complete", expanded=True)
-                        else:
-                            st.error(f"❌ **오답입니다:** {feedback}")
-                            st.info(f"💡 **힌트:** {q['hint']}")
-                            status.update(label="⚠️ 분석 완료: 오답", state="error", expanded=True)
-
-                if is_correct:
-                    if "quiz_history" not in st.session_state:
-                        st.session_state.quiz_history = []
-                    st.session_state.quiz_history.append({
-                        "question": q['question'],
-                        "answer": q_ans,
-                        "correct": True,
-                        "feedback": feedback,
-                        "matched_count": 0,
-                        "matched_titles": []
-                    })
-                    st.session_state.quiz_current += 1
-                    st.session_state.quiz_score += 1
-                    backend.update_score(st.session_state.student_id, st.session_state.quiz_score)
-                    
-                    st.info("ℹ️ 3초 후 다음 문제로 이동합니다...")
-                    time.sleep(3)
-                    st.rerun()
+            if submit_btn:
+                if not q_ans_raw:
+                    st.warning("검색식을 입력해주세요!")
                 else:
+                    # 따옴표/괄호 정규화 및 판정
+                    q_ans = q_ans_raw.replace('“','"').replace('”','"').replace('‘',"'").replace('’',"'").replace('（','(').replace('）',')').upper().strip()
+                    from logic import get_logic_breakdown, check_quiz
+                    try:
+                        is_correct, feedback = check_quiz(cur, q_ans)
+                    except:
+                        is_correct, feedback = False, "문법 오류: 검색식 구조가 올바르지 않습니다."
+                    
+                    logic_data = get_logic_breakdown(q_ans)
+                    
+                    # 결과를 세션에 저장 (Rerun 후에도 유지되도록)
+                    st.session_state.last_result = {
+                        "is_correct": is_correct,
+                        "feedback": feedback,
+                        "logic_data": logic_data,
+                        "q_ans": q_ans,
+                        "hint": q['hint']
+                    }
+                    st.session_state.quiz_answered = True
+                    
+                    # 히스토리 기록
                     if "quiz_history" not in st.session_state:
                         st.session_state.quiz_history = []
                     st.session_state.quiz_history.append({
-                        "question": q['question'],
                         "answer": q_ans,
-                        "correct": False,
-                        "feedback": feedback,
-                        "matched_count": 0,
-                        "matched_titles": []
+                        "correct": is_correct,
+                        "feedback": feedback
                     })
-                    st.session_state.quiz_current += 1
                     
-                    if st.button("다음 문제로 이동 ➡️", type="primary", width="stretch"):
-                        st.rerun()
-                    st.warning("⚠️ 결과를 확인하신 후 위 버튼을 누르거나 잠시 기다려주세요 (5초 후 자동 이동)")
-                    time.sleep(5)
+                    if is_correct:
+                        st.session_state.quiz_score += 1
+                        backend.update_score(st.session_state.student_id, st.session_state.quiz_score)
+                    
                     st.rerun()
+
+    # --- 2. 결과 확인 단계: 제출 후 분석 내용을 보여줄 때 ---
+    else:
+        res = st.session_state.last_result
+        
+        # 자동 스크롤 기능
+        st.markdown("<div id='result_anchor'></div>", unsafe_allow_html=True)
+        st.components.v1.html(
+            f"<script>window.parent.document.getElementById('result_anchor').scrollIntoView({{behavior: 'smooth'}});</script>",
+            height=0
+        )
+
+        # 결과 리포트 섹션
+        with st.status("🔍 제출된 논리 분석 완료", expanded=True):
+            col_v, col_t = st.columns([4, 6])
+            with col_v:
+                k1 = res['logic_data']['keywords'][0] if len(res['logic_data']['keywords']) > 0 else "단어A"
+                k2 = res['logic_data']['keywords'][1] if len(res['logic_data']['keywords']) > 1 else "단어B"
+                st.markdown(render_venn_svg(res['logic_data']['operator'].lower(), k1, k2), unsafe_allow_html=True)
+            with col_t:
+                st.info(f"**해석:** {res['logic_data']['description']}")
+                if res['is_correct']:
+                    st.success(f"🎉 **정답입니다!**\n\n{res['feedback']}")
+                else:
+                    st.error(f"❌ **오답입니다!**\n\n{res['feedback']}")
+                    st.warning(f"💡 **힌트:** {res['hint']}")
+
+        # 명시적인 다음 단계 이동 버튼
+        if st.button("다음 문제로 이동 ➡️" if cur < total_q-1 else "최종 결과 확인 🏁", type="primary", width="stretch"):
+            st.session_state.quiz_current += 1
+            st.session_state.quiz_answered = False
+            st.session_state.last_result = None
+            st.rerun()
 
     if cur >= total_q:
         # (기존 결과 표시 로직)
