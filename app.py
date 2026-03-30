@@ -80,7 +80,7 @@ if not st.session_state.logged_in:
     with st.form("login_form"):
         s_id = st.text_input("학번 (예: 20401, 관리자는 admin)")
         name = st.text_input("이름 (예: 홍길동)")
-        submitted = st.form_submit_button("실습 시작", use_container_width=True)
+        submitted = st.form_submit_button("실습 시작", width="stretch")
         
         if submitted:
             if s_id and name:
@@ -103,7 +103,7 @@ with col1:
     st.markdown("### 📚 불리언 연산자 실습")
 with col2:
     st.caption(f"👤 {st.session_state.student_id} {st.session_state.name}")
-    if st.button("로그아웃", use_container_width=True):
+    if st.button("로그아웃", width="stretch"):
         st.session_state.logged_in = False
         st.rerun()
 
@@ -143,7 +143,7 @@ if choice == "🎓 연구 과제 수행":
                     "상세 진단 피드백": h['feedback']
                 })
             df_history = pd.DataFrame(history_data)
-            st.dataframe(df_history, use_container_width=True, hide_index=True)
+            st.dataframe(df_history, width="stretch", hide_index=True)
 
         if st.button("처음부터 다시 시작하기"):
             st.session_state.quiz_current = 0
@@ -166,7 +166,7 @@ if choice == "🎓 연구 과제 수행":
         st.write("")
         with st.form(key=f"quiz_form_{cur}", clear_on_submit=False):
             q_ans = st.text_input("검색식을 입력하고 Enter를 누르세요:", key=f"q_input_{cur}")
-            submit_btn = st.form_submit_button("수행 결과 제출 ➡️", use_container_width=True, type="primary")
+            submit_btn = st.form_submit_button("수행 결과 제출 ➡️", width="stretch", type="primary")
 
         if submit_btn:
             if not q_ans:
@@ -228,7 +228,7 @@ if choice == "🎓 연구 과제 수행":
                     })
                     st.session_state.quiz_current += 1
                     
-                    if st.button("기다리지 않고 다음 문제로 이동 ➡️", type="primary", use_container_width=True):
+                    if st.button("기다리지 않고 다음 문제로 이동 ➡️", type="primary", width="stretch"):
                         st.rerun()
                     st.warning("⚠️ 5초 후 다음 문제로 자동 이동합니다...")
                     time.sleep(5)
@@ -298,7 +298,7 @@ elif choice == "⚙️ 관리자 (Admin)":
         
         df = backend.get_all_students()
         st.write("### 🎓 학생 접속 및 과제 수행 현황")
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, width="stretch")
         
         if not df.empty:
             avg_score = df["퀴즈 점수"].mean()
