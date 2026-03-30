@@ -1,62 +1,59 @@
 # backend.py
-import sqlite3
 import pandas as pd
 from datetime import datetime
-import os
-
 import streamlit as st
 
-DB_PATH = 'students.db'
-
 @st.cache_resource
-def get_db_connection():
-    return sqlite3.connect(DB_PATH, check_same_thread=False)
-
-def init_db():
-    conn = get_db_connection()
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS students (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            student_id TEXT UNIQUE,
-            name TEXT,
-            last_login TEXT,
-            score INTEGER DEFAULT 0
-        )
-    ''')
-    conn.commit()
-
+def get_shared_db():
+    """
+    모든 세션이 공유하는 메모리 공간을 생성합니다.
+    서버가 재시작되기 전까지 모든 학생의 데이터를 메모리에 보관합니다.
+    """
+    return {}
 
 def login_student(student_id, name):
-    conn = get_db_connection()
-    c = conn.cursor()
-    nowStr = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    db = get_shared_db()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    # Try inserting. If exists, update login time.
-    c.execute('SELECT * FROM students WHERE student_id = ?', (student_id,))
-    row = c.fetchone()
-    
-    if row:
-        c.execute('UPDATE students SET last_login = ?, name = ? WHERE student_id = ?', (nowStr, name, student_id))
+    # 학번을 키로 하여 정보 저장 또는 업데이트
+    if student_id not in db:
+        db[student_id] = {
+            "student_id": student_id,
+            "name": name,
+            "last_login": now_str,
+            "score": 0
+        }
     else:
-        c.execute('INSERT INTO students (student_id, name, last_login) VALUES (?, ?, ?)', (student_id, name, nowStr))
-        
-    conn.commit()
+        # 기존 학번이 있으면 로그인 시간과 이름 업데이트
+        db[student_id]["last_login"] = now_str
+        db[student_id]["name"] = name
 
 def update_score(student_id, new_score):
-    conn = get_db_connection()
-    c = conn.cursor()
-    c.execute('SELECT score FROM students WHERE student_id = ?', (student_id,))
-    row = c.fetchone()
-    current_score = row[0] if row else 0
-    if new_score > current_score:
-        c.execute('UPDATE students SET score = ? WHERE student_id = ?', (new_score, student_id))
-    conn.commit()
+    db = get_shared_db()
+    if student_id in db:
+        # 기존 최고 점수보다 높을 때만 업데이트
+        if new_score > db[student_id]["score"]:
+            db[student_id]["score"] = new_score
 
 def get_all_students():
-    conn = get_db_connection()
-    df = pd.read_sql_query('SELECT student_id as "학번", name as "이름", score as "퀴즈 점수", last_login as "마지막 접속" FROM students ORDER BY last_login DESC', conn)
+    db = get_shared_db()
+    if not db:
+        return pd.DataFrame(columns=["학번", "이름", "퀴즈 점수", "마지막 접속"])
+    
+    # 딕셔너리 데이터를 리스트로 변환하여 Pandas DataFrame 생성
+    data_list = []
+    for s_id in db:
+        data_list.append({
+            "학번": db[s_id]["student_id"],
+            "이름": db[s_id]["name"],
+            "퀴즈 점수": db[s_id]["score"],
+            "마지막 접속": db[s_id]["last_login"]
+        })
+    
+    df = pd.DataFrame(data_list)
+    
+    # 마지막 접속 시간 기준 내림차순 정렬
+    if not df.empty:
+        df = df.sort_values(by="마지막 접속", ascending=False)
+        
     return df
-
-# Initialize DB on import
-init_db()
