@@ -185,7 +185,8 @@ if choice == "🎓 연구 과제 수행":
         
         with st.form(key=f"quiz_form_{cur}", clear_on_submit=False):
             q_ans_raw = st.text_input("검색식 입력:", placeholder="여기에 검색식을 입력하세요 (예: A AND B)", key=f"q_input_{cur}")
-            q_ans = q_ans_raw.upper().strip() # 대문자 변환 및 공백 제거
+            # 따옴표 및 괄호 정규화 로직 추가
+            q_ans = q_ans_raw.replace('“','"').replace('”','"').replace('‘',"'").replace('’',"'").replace('（','(').replace('）',')').upper().strip()
             submit_btn = st.form_submit_button("수행 결과 제출 ➡️", width="stretch", type="primary")
 
         if submit_btn:
@@ -232,7 +233,7 @@ if choice == "🎓 연구 과제 수행":
                     st.session_state.quiz_score += 1
                     backend.update_score(st.session_state.student_id, st.session_state.quiz_score)
                     
-                    st.info("ℹ️ 3초 후 다음 문제로 자동 이동합니다...")
+                    st.info("ℹ️ 3초 후 다음 문제로 이동합니다...")
                     time.sleep(3)
                     st.rerun()
                 else:
@@ -248,9 +249,9 @@ if choice == "🎓 연구 과제 수행":
                     })
                     st.session_state.quiz_current += 1
                     
-                    if st.button("기다리지 않고 다음 문제로 이동 ➡️", type="primary", width="stretch"):
+                    if st.button("다음 문제로 이동 ➡️", type="primary", width="stretch"):
                         st.rerun()
-                    st.warning("⚠️ 5초 후 다음 문제로 자동 이동합니다...")
+                    st.warning("⚠️ 결과를 확인하신 후 위 버튼을 누르거나 잠시 기다려주세요 (5초 후 자동 이동)")
                     time.sleep(5)
                     st.rerun()
 
