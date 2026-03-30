@@ -97,15 +97,30 @@ if not st.session_state.logged_in:
 
 
 # ----------------- 모바일 친화적 상단 레이아웃 -----------------
-# 타이틀 & 정보
-col1, col2 = st.columns([7, 3])
-with col1:
-    st.markdown("### 📚 불리언 연산자 실습")
-with col2:
-    st.caption(f"👤 {st.session_state.student_id} {st.session_state.name}")
-    if st.button("로그아웃", width="stretch"):
-        st.session_state.logged_in = False
+# ----------------- 스타일 및 모바일 최적화 CSS -----------------
+st.markdown("""
+    <style>
+    /* 상단 메뉴 및 컨텐츠 여백 최소화 */
+    .block-container { padding-top: 1rem; padding-bottom: 0rem; }
+    div[data-testid="stForm"] { border: 1px solid #ddd; padding: 0.5rem; }
+    
+    /* 입력창 레이블 숨기기 (공간 절약) */
+    div[data-testid="stForm"] label { height: 0px; visibility: hidden; }
+    
+    /* 타이틀 및 버튼 스타일 */
+    .stButton>button { border-radius: 8px; }
+    </style>
+""", unsafe_allow_html=True)
+
+# ----------------- 헤더: 로고 및 새로고침 -----------------
+col_title, col_user = st.columns([7, 3])
+with col_title:
+    if st.button("📚 불리언 연산자 실습", key="logo_btn", width="stretch"):
+        st.session_state.menu_choice = "🎓 연구 과제 수행"
         st.rerun()
+
+with col_user:
+    st.caption(f"👤 {st.session_state.student_id} {st.session_state.name}")
 
 is_admin = (st.session_state.student_id == "admin") 
 
@@ -120,11 +135,13 @@ st.markdown("---")
 
 # ----------------- 화면 1: 퀴즈 -----------------
 if choice == "🎓 연구 과제 수행":
-    st.title("연구 과제 수행 🎓")
-    st.write("가상의 수행평가 및 학술 조사 시나리오를 읽고, 알맞은 검색식을 작성해보세요.")
-    
     total_q = len(QUIZ_QUESTIONS)
     cur = st.session_state.quiz_current
+    
+    # 퀴즈 시작 전이나 종료 후에만 설명 표시
+    if cur == 0:
+        st.title("연구 과제 수행 🎓")
+        st.write("시나리오를 읽고 알맞은 검색식을 작성하세요.")
     
     if cur >= total_q:
         st.success(f"🎉 모든 과제를 완수했습니다! 최종 점수: {st.session_state.quiz_score}/{total_q}")
@@ -161,11 +178,10 @@ if choice == "🎓 연구 과제 수행":
             st.caption(f"🏁 MISSION {cur+1}")
             st.markdown(f"### {q['question']}")
         
-        # 실시간 논리 프리뷰 제거 (기존 127-140라인 삭제)
+        # 실시간 논리 프리뷰 제거
         
-        st.write("")
         with st.form(key=f"quiz_form_{cur}", clear_on_submit=False):
-            q_ans = st.text_input("검색식을 입력하고 Enter를 누르세요:", key=f"q_input_{cur}")
+            q_ans = st.text_input("검색식 입력:", placeholder="여기에 검색식을 입력하세요 (예: A AND B)", key=f"q_input_{cur}")
             submit_btn = st.form_submit_button("수행 결과 제출 ➡️", width="stretch", type="primary")
 
         if submit_btn:
