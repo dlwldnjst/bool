@@ -109,6 +109,9 @@ st.markdown("""
     
     /* 타이틀 및 버튼 스타일 */
     .stButton>button { border-radius: 8px; }
+
+    /* 입력창 영문 대문자 강제 (시각적) */
+    input { text-transform: uppercase; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -181,7 +184,8 @@ if choice == "🎓 연구 과제 수행":
         # 실시간 논리 프리뷰 제거
         
         with st.form(key=f"quiz_form_{cur}", clear_on_submit=False):
-            q_ans = st.text_input("검색식 입력:", placeholder="여기에 검색식을 입력하세요 (예: A AND B)", key=f"q_input_{cur}")
+            q_ans_raw = st.text_input("검색식 입력:", placeholder="여기에 검색식을 입력하세요 (예: A AND B)", key=f"q_input_{cur}")
+            q_ans = q_ans_raw.upper().strip() # 대문자 변환 및 공백 제거
             submit_btn = st.form_submit_button("수행 결과 제출 ➡️", width="stretch", type="primary")
 
         if submit_btn:
