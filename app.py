@@ -264,12 +264,7 @@ if choice == "🎓 연구 과제 수행":
             st.session_state.last_result = None
             st.rerun()
 
-    if cur >= total_q:
-        # (기존 결과 표시 로직)
-        st.success(f"🎉 모든 과제를 완수했습니다! 최종 점수: {st.session_state.quiz_score}/{total_q}")
-        # ... (생략된 내역) ...
-    else:
-        quiz_area(cur, QUIZ_QUESTIONS[cur])
+
 
 # ----------------- 화면 3: 가이드 -----------------
 elif choice == "📖 검색 연산자 가이드":
