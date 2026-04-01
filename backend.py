@@ -3,57 +3,65 @@ import pandas as pd
 from datetime import datetime
 import streamlit as st
 
-@st.cache_resource
-def get_shared_db():
-    """
-    모든 세션이 공유하는 메모리 공간을 생성합니다.
-    서버가 재시작되기 전까지 모든 학생의 데이터를 메모리에 보관합니다.
-    """
-    return {}
+from streamlit_gsheets import GSheetsConnection
+
+def get_gsheet_conn():
+    return st.connection("gsheets", type=GSheetsConnection)
+
+def get_all_students_df():
+    try:
+        conn = get_gsheet_conn()
+        df = conn.read(worksheet="Sheet1", ttl=0) # 항상 최신 데이터를 읽어옵니다
+        
+        if df.empty or len(df.columns) < 4:
+            return pd.DataFrame(columns=["학번", "이름", "퀴즈 점수", "마지막 접속"])
+            
+        df = df.dropna(how="all")
+        df["학번"] = df["학번"].astype(str).str.replace(".0", "", regex=False)
+        return df
+    except Exception as e:
+        return pd.DataFrame(columns=["학번", "이름", "퀴즈 점수", "마지막 접속"])
 
 def login_student(student_id, name):
-    db = get_shared_db()
+    student_id = str(student_id)
+    df = get_all_students_df()
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    # 학번을 키로 하여 정보 저장 또는 업데이트
-    if student_id not in db:
-        db[student_id] = {
-            "student_id": student_id,
-            "name": name,
-            "last_login": now_str,
-            "score": 0
-        }
+    mask = df["학번"] == student_id
+    if mask.any():
+        df.loc[mask, "이름"] = name
+        df.loc[mask, "마지막 접속"] = now_str
     else:
-        # 기존 학번이 있으면 로그인 시간과 이름 업데이트
-        db[student_id]["last_login"] = now_str
-        db[student_id]["name"] = name
+        new_row = pd.DataFrame([{
+            "학번": student_id,
+            "이름": name,
+            "퀴즈 점수": 0,
+            "마지막 접속": now_str
+        }])
+        df = pd.concat([df, new_row], ignore_index=True)
+    
+    conn = get_gsheet_conn()
+    conn.update(worksheet="Sheet1", data=df)
 
 def update_score(student_id, new_score):
-    db = get_shared_db()
-    if student_id in db:
-        # 기존 최고 점수보다 높을 때만 업데이트
-        if new_score > db[student_id]["score"]:
-            db[student_id]["score"] = new_score
+    student_id = str(student_id)
+    df = get_all_students_df()
+    
+    mask = df["학번"] == student_id
+    if mask.any():
+        current_score = df.loc[mask, "퀴즈 점수"].values[0]
+        try:
+            current_score = int(current_score) if pd.notna(current_score) else 0
+        except ValueError:
+            current_score = 0
+            
+        if new_score > current_score:
+            df.loc[mask, "퀴즈 점수"] = new_score
+            conn = get_gsheet_conn()
+            conn.update(worksheet="Sheet1", data=df)
 
 def get_all_students():
-    db = get_shared_db()
-    if not db:
-        return pd.DataFrame(columns=["학번", "이름", "퀴즈 점수", "마지막 접속"])
-    
-    # 딕셔너리 데이터를 리스트로 변환하여 Pandas DataFrame 생성
-    data_list = []
-    for s_id in db:
-        data_list.append({
-            "학번": db[s_id]["student_id"],
-            "이름": db[s_id]["name"],
-            "퀴즈 점수": db[s_id]["score"],
-            "마지막 접속": db[s_id]["last_login"]
-        })
-    
-    df = pd.DataFrame(data_list)
-    
-    # 마지막 접속 시간 기준 내림차순 정렬
+    df = get_all_students_df()
     if not df.empty:
         df = df.sort_values(by="마지막 접속", ascending=False)
-        
     return df
