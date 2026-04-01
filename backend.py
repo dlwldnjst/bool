@@ -20,6 +20,7 @@ def get_all_students_df():
         df["학번"] = df["학번"].astype(str).str.replace(".0", "", regex=False)
         return df
     except Exception as e:
+        st.error(f"⚠️ 구글 시트 데이터를 읽지 못했습니다: {e}")
         return pd.DataFrame(columns=["학번", "이름", "퀴즈 점수", "마지막 접속"])
 
 def login_student(student_id, name):
@@ -40,8 +41,11 @@ def login_student(student_id, name):
         }])
         df = pd.concat([df, new_row], ignore_index=True)
     
-    conn = get_gsheet_conn()
-    conn.update(worksheet="Sheet1", data=df)
+    try:
+        conn = get_gsheet_conn()
+        conn.update(worksheet="Sheet1", data=df)
+    except Exception as e:
+        st.error(f"⚠️ 구글 시트에 학생 정보를 기록하지 못했습니다: {e}")
 
 def update_score(student_id, new_score):
     student_id = str(student_id)
@@ -57,8 +61,11 @@ def update_score(student_id, new_score):
             
         if new_score > current_score:
             df.loc[mask, "퀴즈 점수"] = new_score
-            conn = get_gsheet_conn()
-            conn.update(worksheet="Sheet1", data=df)
+            try:
+                conn = get_gsheet_conn()
+                conn.update(worksheet="Sheet1", data=df)
+            except Exception as e:
+                st.error(f"⚠️ 구글 시트에 점수를 업데이트하지 못했습니다: {e}")
 
 def get_all_students():
     df = get_all_students_df()
