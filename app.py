@@ -264,6 +264,17 @@ if choice == "🎓 연구 과제 수행":
             st.session_state.last_result = None
             st.rerun()
 
+        # 5초 타이머 후 자동 이동
+        placeholder = st.empty()
+        for i in range(5, 0, -1):
+            placeholder.caption(f"⏳ {i}초 후 자동으로 이동합니다...")
+            time.sleep(1)
+            
+        st.session_state.quiz_current += 1
+        st.session_state.quiz_answered = False
+        st.session_state.last_result = None
+        st.rerun()
+
 
 
 # ----------------- 화면 3: 가이드 -----------------
