@@ -74,7 +74,7 @@ if "menu_choice" not in st.session_state:
 
 # ----------------- 로그인 페이지 -----------------
 if not st.session_state.logged_in:
-    st.title("📚 불리언 연산자 실습 접속")
+    st.title("📚 덕이고 불리언 연산자 실습")
     st.write("학생 조회를 위해 학번과 이름을 입력해주세요.")
     
     with st.form("login_form"):
