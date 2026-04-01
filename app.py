@@ -53,7 +53,7 @@ def render_venn_svg(type, label_a="A", label_b="B"):
     return svg_header + content + text_content + "</svg>"
 
 
-st.set_page_config(page_title="불리언 연산자 실습", page_icon="📚", layout="centered", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="덕이고 불리언 연산자 실습", page_icon="📚", layout="centered", initial_sidebar_state="collapsed")
 
 # 로컬 스토리지처럼 사용될 세션 초기화
 if "logged_in" not in st.session_state:
