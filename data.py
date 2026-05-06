@@ -221,7 +221,13 @@ def q5_validate(toks, ast):
 
 def q6_validate(toks, ast):
     if not has_type(ast, 'OR'): return False, "유사한 두 개념(임시정부, 독립운동)은 OR 연산자로 묶어야 합니다."
-    if not any(x['type'] == 'phrase' and '3·1 운동' in x['value'] for x in ast): return False, "3·1 운동 은 띄어쓰기까지 일치하도록 따옴표로 감싸야 기합니다."
+    # "3·1 운동", "3.1 운동", "3・1 운동" 등 모두 허용 (중간점/마침표 정규화)
+    has_31_phrase = any(
+        x['type'] == 'phrase' and
+        x['value'].replace('.', '·').replace('・', '·').replace('ㆍ', '·') in ['3·1 운동', '삼일 운동', '3·1운동']
+        for x in ast
+    )
+    if not has_31_phrase: return False, "3·1 운동 은 띄어쓰기까지 일치하도록 따옴표로 감싸야 합니다."
     if not (has_val(ast, '임시정부') or has_val(ast, '독립운동')): return False, "임시정부 또는 독립운동 단어가 포함되어야 합니다."
     return True, "정답! 괄호, OR, AND, 따옴표가 모두 결합된 고급 검색식입니다."
 

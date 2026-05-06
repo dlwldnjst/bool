@@ -65,6 +65,7 @@ if "quiz_current" not in st.session_state:
     st.session_state.quiz_current = 0
     st.session_state.quiz_score = 0
     st.session_state.quiz_answered = False
+    st.session_state.quiz_best_score = 0  # 시트에 기록된 최고 점수
 
 if "quiz_retry_count" not in st.session_state:
     st.session_state.quiz_retry_count = 0
@@ -84,9 +85,8 @@ if not st.session_state.logged_in:
         
         if submitted:
             if s_id and name:
-                # DB 기록
+                # DB 기록 (비차단: 실패해도 로그인 허용 — 초기 점수 0이므로 손실 없음)
                 backend.login_student(s_id, name)
-                
                 st.session_state.logged_in = True
                 st.session_state.student_id = s_id
                 st.session_state.name = name
@@ -167,6 +167,7 @@ if choice == "🎓 연구 과제 수행":
         if st.button("처음부터 다시 시작하기", width="stretch"):
             st.session_state.quiz_current = 0
             st.session_state.quiz_score = 0
+            # quiz_best_score는 유지 — 시트에 이미 기록된 최고 점수 보존
             st.session_state.quiz_history = []
             st.session_state.quiz_answered = False
             st.rerun()
@@ -227,7 +228,15 @@ if choice == "🎓 연구 과제 수행":
                     
                     if is_correct:
                         st.session_state.quiz_score += 1
-                        backend.update_score(st.session_state.student_id, st.session_state.quiz_score)
+                        backend.update_score(
+                            st.session_state.student_id,
+                            st.session_state.name,
+                            st.session_state.quiz_score,
+                            st.session_state.quiz_best_score
+                        )
+                        # 시트에 기록 성공 시 최고 점수 업데이트
+                        if st.session_state.quiz_score > st.session_state.quiz_best_score:
+                            st.session_state.quiz_best_score = st.session_state.quiz_score
                     
                     st.rerun()
 
