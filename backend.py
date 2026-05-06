@@ -15,8 +15,10 @@ SCOPES = [
 def _get_gspread_client():
     """매번 새 gspread 클라이언트를 생성합니다 (캐싱하지 않음)."""
     raw = dict(st.secrets["connections"]["gsheets"])
-    # spreadsheet URL은 인증에 불필요하므로 제거
     raw.pop("spreadsheet", None)
+    # Streamlit Cloud TOML에서 private_key의 \n이 리터럴 문자열로 저장되는 문제 수정
+    if "private_key" in raw and isinstance(raw["private_key"], str):
+        raw["private_key"] = raw["private_key"].replace("\\n", "\n")
     creds = Credentials.from_service_account_info(raw, scopes=SCOPES)
     return gspread.authorize(creds)
 
