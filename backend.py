@@ -11,8 +11,8 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive",
 ]
 
-# service account JSON에 없어야 하는 TOML 전용 필드들
-_TOML_EXTRA_KEYS = {"spreadsheet", "type"}
+# service account JSON에 없어야 하는 TOML 전용 필드
+_TOML_EXTRA_KEYS = {"spreadsheet"}
 
 
 def _get_creds_info():
