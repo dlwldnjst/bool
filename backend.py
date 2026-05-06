@@ -1,11 +1,8 @@
 import pandas as pd
 import re
-import tempfile
-import json
 from datetime import datetime
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
-from google.oauth2.service_account import Credentials
 
 
 COLS = ["학번", "이름", "퀴즈 점수", "마지막 접속"]
@@ -51,6 +48,7 @@ def diagnose_connection():
 
     # 정규화 후 인증 테스트
     try:
+        from google.oauth2.service_account import Credentials
         info = {k: v for k, v in raw.items() if k != "spreadsheet"}
         info["private_key"] = _normalize_private_key(info["private_key"])
         scopes = [
