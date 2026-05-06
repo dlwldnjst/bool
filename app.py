@@ -125,6 +125,13 @@ with col_title:
 with col_user:
     st.caption(f"👤 {st.session_state.student_id} {st.session_state.name}")
 
+# 저장 실패 에러가 있으면 화면에 표시 (rerun 후에도 유지)
+if "_gsheet_error" in st.session_state and st.session_state["_gsheet_error"]:
+    st.error(f"⚠️ {st.session_state['_gsheet_error']}")
+    if st.button("에러 메시지 닫기"):
+        st.session_state["_gsheet_error"] = ""
+        st.rerun()
+
 is_admin = (st.session_state.student_id == "admin") 
 
 menu_options = ["🎓 연구 과제 수행", "📖 검색 연산자 가이드"]
