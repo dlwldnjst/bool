@@ -347,7 +347,16 @@ elif choice == "⚙️ 관리자 (Admin)":
     pwd = st.text_input("관리자 비밀번호를 입력하세요:", type="password")
     if pwd == "admin1234":
         st.success("인증 성공")
-        
+
+        # 연결 진단
+        st.write("### 🔧 구글 시트 연결 진단")
+        if st.button("연결 상태 검사", type="primary"):
+            with st.spinner("진단 중..."):
+                results = backend.diagnose_connection()
+            for line in results:
+                st.write(line)
+
+        st.write("---")
         df = backend.get_all_students()
         st.write("### 🎓 학생 접속 및 과제 수행 현황")
         st.dataframe(df, width="stretch")
